@@ -1,10 +1,10 @@
 ---
 summary: オフライン・ブラウザ完結のピボット/BI領域の最高峰調査。結論はPerspective継続+HueyのUNION結合とTadの1パネル設定UXを盗む。
-insight: Pivot Bench M1 (Salesforceレポート上位互換)
+insight: Pivot Bench 本体 (Salesforceレポート上位互換)
 date: 2026-07-04
 ---
 
-# R01 オフラインBI/ピボット最高峰調査
+# オフラインBI/ピボットの最高峰調べ
 
 ## 調査対象の問い
 
@@ -19,7 +19,7 @@ date: 2026-07-04
 | FINOS Perspective | 組込コンポーネント | 独自WASM | Apache-2.0 | 大規模データの速度・datagridは頭一つ抜けている。現土台 |
 | Huey (rpbouman/huey) | 静的Webアプリ | DuckDB-WASM | MIT | file://で動く。**類似ファイル自動UNION**が天才的 |
 | Tad (antonycourtney/tad) | デスクトップ | DuckDB | MIT | **1パネルでピボット設定が完結**するUXの教科書 |
-| Graphic Walker (Kanaries) | 組込コンポーネント | 独自/wasm | Apache-2.0 | Tableau風ドラッグ&ドロップ。チャートが欲しくなったら(M4以降) |
+| Graphic Walker (Kanaries) | 組込コンポーネント | 独自/wasm | Apache-2.0 | Tableau風ドラッグ&ドロップ。チャートが欲しくなったら参考にする(今は不要) |
 | WebPivotTable / WebDataRocks / Flexmonster | 商用コンポーネント | 独自 | 商用 | 商用の磨き込み参考。採用はしない |
 | Excel + XL-Connector / Coefficient | 現職の主流 | Excel | 商用 | 「今のやり方」。ここからの脱出が本プロジェクト |
 
@@ -28,13 +28,13 @@ date: 2026-07-04
 ### FINOS Perspective — github.com/finos/perspective
 
 - 何が最高峰か: ストリーミング/大規模データでの描画速度、`group_by`/`split_by`/`aggregates` を備えた datagrid、WASM完結
-- 盗むべき: すでに土台として採用済み。`split_by`(列分割)がM1の核
+- 盗むべき: すでに土台として採用済み。`split_by`(列分割)が本体の核
 - 自分のmustとの適合: 正規化・バケットマスタ・複数レポート結合は**無い**(=作る差分)
 
 ### Huey — github.com/rpbouman/huey
 
 - 何が最高峰か: DuckDB-WASMでfile://完結、PWAオフライン。**カラム構成が類似するファイルを自動グループ化してUNION分析**できる
-- 盗むべき: ①複数レポートのUNION結合(列和集合+出所列) ②結果とクエリのクリップボード/ファイル書き出し(M2へ)
+- 盗むべき: ①複数レポートのUNION結合(列和集合+出所列) ②結果とクエリのクリップボード/ファイル書き出し(次の磨き込みで)
 - 捨てる: SQL露出、属性ツリーの重厚なUI(自分はキー3〜4個を選ぶだけでいい)
 
 ### Tad — github.com/antonycourtney/tad
@@ -46,8 +46,8 @@ date: 2026-07-04
 ## 結論
 
 - **そのまま使える既存ツールは無い**: Huey/Tadは近いが、日本語Salesforceレポートの正規化(全角/△/¥/Shift_JIS)+バケットマスタ3階層派生+3面比較を併せ持つものは存在しない → 差分を作る判断は正しい
-- **ベース**: 既存 Pivot Bench(Perspective)を継続。DuckDB-WASMへの乗換は、SQLが必要になるM4以降に再検討(乗換先はHuey構造を参照)
-- **盗む機能リスト**: Hueyから「複数ファイルUNION+出所列」/ Tadから「1パネル・プリセットバーUX」/ Hueyから「結果書き出し」(M2)
+- **ベース**: 既存 Pivot Bench(Perspective)を継続。DuckDB-WASMへの乗換は、SQLが必要になったときに再検討(乗換先はHuey構造を参照)
+- **盗む機能リスト**: Hueyから「複数ファイルUNION+出所列」/ Tadから「1パネル・プリセットバーUX」/ Hueyから「結果書き出し」(次の磨き込みで)
 
 ## 出典
 
