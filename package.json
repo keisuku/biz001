@@ -1,0 +1,1 @@
+{"scripts":{"build":"node build/build.mjs","generate:testdata":"node build/generate-testdata.mjs"},"dependencies":{"@finos/perspective":"latest","@finos/perspective-viewer":"latest","@finos/perspective-viewer-datagrid":"latest","xlsx":"latest"},"devDependencies":{}}
