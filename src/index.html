@@ -1,1 +1,33 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pivot Bench</title><style>__CSS__</style></head><body><header><h1>Pivot <span>Bench</span></h1><button id="specBtn">📖仕様書</button></header><main id="app"><section id="start" class="drop"><input id="file" type="file" accept=".csv,.xlsx" hidden><button id="open">CSV/xlsxを開く</button><button id="masterOpen">マスタを開く</button><p>ファイルをここへドロップ</p></section><section id="bench" hidden><div id="gauges"><div id="unmatched" class="gauge">未分類 <b>0</b></div><div id="toast" role="status"></div></div><div id="panes"></div></section></main><dialog id="spec"><button id="closeSpec">×</button><h2>Pivot Bench 仕様要約</h2><p>CSV/xlsxを正規化し、独立JSONのバケットマスタで大分類/中分類/小分類を派生、FINOS Perspective datagridで行3階層×列分割のピボットを最大3面で比較します。localStorageと実行時ネットワークは使いません。</p></dialog><script type="module">__APP__</script></body></html>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pivot Bench</title><style>__CSS__</style></head><body>
+<header>
+  <h1>Pivot <span>Bench</span></h1>
+  <nav>
+    <button id="masterOpen" title="バケットマスタJSONを読み込み">マスタを開く</button>
+    <button id="masterDefault" title="組込みの標準マスタを適用">標準マスタ</button>
+    <button id="masterExport" title="現在のバケットマスタをJSONで書き出し">マスタ書き出し</button>
+    <button id="viewExport" title="3ペインのビュー設定をJSONで書き出し">ビュー書き出し</button>
+    <button id="viewImport" title="ビュー設定JSONを読み込み">ビュー読込</button>
+    <button id="specBtn">📖仕様書</button>
+  </nav>
+</header>
+<main id="app">
+  <section id="start" class="drop">
+    <button id="open">CSV/xlsxを開く</button>
+    <p>ファイルをここへドロップ (CSV/xlsx = データ、JSON = マスタ)</p>
+  </section>
+  <section id="bench" hidden>
+    <div id="gauges">
+      <div id="unmatched" class="gauge">未分類 <b>0</b></div>
+      <button id="reopen">別ファイルを開く</button>
+      <div id="toast" role="status"></div>
+    </div>
+    <div id="panes"></div>
+  </section>
+</main>
+<dialog id="spec">
+  <button id="closeSpec">×</button>
+  <h2>Pivot Bench 仕様要約</h2>
+  <p>CSV/xlsxを正規化(全角→半角、△/()→負数、¥・カンマ除去、空・「-」→null)し、独立JSONのバケットマスタで大分類/中分類/小分類を派生、FINOS Perspective datagridで3階層ピボットを最大3面で比較します。localStorageと実行時ネットワークは使いません。マスタ・ビュー設定はJSONファイルの入出力で永続化します。CSVはUTF-8/Shift_JISを自動判定します。</p>
+</dialog>
+<script type="module">__APP__</script>
+</body></html>

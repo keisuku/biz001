@@ -1,1 +1,1 @@
-{"scripts":{"build":"node build/build.mjs","generate:testdata":"node build/generate-testdata.mjs"},"dependencies":{"@finos/perspective":"latest","@finos/perspective-viewer":"latest","@finos/perspective-viewer-datagrid":"latest","xlsx":"latest"},"devDependencies":{}}
+{"scripts":{"build":"node build/build.mjs","generate:testdata":"node build/generate-testdata.mjs"},"dependencies":{"@finos/perspective":"3.8.0","@finos/perspective-viewer":"3.8.0","@finos/perspective-viewer-datagrid":"3.8.0","esbuild":"0.28.1","xlsx":"0.18.5"}}
