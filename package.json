@@ -2,7 +2,10 @@
   "scripts": {
     "build": "node build/build.mjs",
     "generate:testdata": "node build/generate-testdata.mjs",
-    "test": "node test-pivot-bench.mjs"
+    "test": "node test-pivot-bench.mjs",
+    "build:ga4": "node ga4-bench/build/build.mjs",
+    "generate:ga4-sample": "node ga4-bench/build/generate-sample.mjs",
+    "test:ga4": "node test-ga4-bench.mjs"
   },
   "dependencies": {
     "@finos/perspective": "3.8.0",
@@ -10,5 +13,6 @@
     "@finos/perspective-viewer-datagrid": "3.8.0",
     "esbuild": "0.28.1",
     "xlsx": "0.18.5"
-  }
+  },
+  "type": "module"
 }
