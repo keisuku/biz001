@@ -12,6 +12,7 @@ const PANE_COUNT = 3;
 const MAX_REPORTS = 3;
 const SOURCE_COL = 'レポート';
 const AGGS = ['sum', 'count', 'avg', 'min', 'max'];
+const VIEW_KIND = 'pivot-bench-views';
 
 // ---- 状態 (localStorage禁止: 永続化は全てJSON入出力) ----
 let master = null;
@@ -22,6 +23,8 @@ let activePane = 0;
 let worker = null;
 const tables = new Map();      // reportIdx -> perspective table
 let combinedTable = null;
+let ruleStats = {hits: [], unmatched: 0};
+let favorites = [];
 
 const defaultMaster = {
   meta: {name: '商材分類 v1', updated: '2026-07-04', note: ''},
@@ -101,11 +104,12 @@ function applyMaster(rows, m) {
   if (!col) {
     return {
       rows: rows.map(r => ({...r, [m.levels[0]]: m.unmatched[0], [m.levels[1]]: m.unmatched[1], [m.levels[2]]: m.unmatched[2]})),
-      unmatched: rows.length, col: null
+      unmatched: rows.length, col: null, hits: m.rules.map(() => 0)
     };
   }
   const regexes = m.rules.map(r => r.match.type === 'regex' ? new RegExp(r.match.value) : null);
   let unmatched = 0;
+  const hits = m.rules.map(() => 0);
   const out = rows.map(r => {
     let a = m.unmatched, hit = false;
     const v = r[col], s = normText(v);
@@ -116,12 +120,12 @@ function applyMaster(rows, m) {
         mt.type === 'prefix' ? s != null && s.startsWith(mt.value) :
         mt.type === 'regex' ? regexes[i].test(s || '') :
         (() => { const n = normNum(v); return n != null && n >= mt.min && n <= mt.max; })();
-      if (ok) { a = m.rules[i].assign; hit = true; break; }
+      if (ok) { a = m.rules[i].assign; hits[i]++; hit = true; break; }
     }
     if (!hit) unmatched++;
     return {...r, [m.levels[0]]: a[0], [m.levels[1]]: a[1], [m.levels[2]]: a[2]};
   });
-  return {rows: out, unmatched, col};
+  return {rows: out, unmatched, col, hits};
 }
 
 function stripLevels(rows, m) {
@@ -130,12 +134,16 @@ function stripLevels(rows, m) {
 }
 
 function reapplyMasterAll() {
+  const hits = (master ?? defaultMaster).rules.map(() => 0);
+  let unmatchedTotal = 0;
   for (const rep of reports) {
     const base = stripLevels(rep.rows, master);
     if (master) {
       const res = applyMaster(base, master);
       rep.rows = res.rows;
       rep.unmatched = res.unmatched;
+      unmatchedTotal += res.unmatched;
+      res.hits.forEach((h, i) => { hits[i] = (hits[i] || 0) + h; });
       if (res.col == null) toast(`${rep.name}: 対象列が見つかりません (候補: ${master.target_column_candidates.join(', ')})`);
       rep.cols = Object.keys(rep.rows[0] || {});
     } else {
@@ -144,6 +152,7 @@ function reapplyMasterAll() {
       rep.cols = Object.keys(rep.rows[0] || {});
     }
   }
+  ruleStats = {hits, unmatched: unmatchedTotal};
 }
 
 // ---- ファイル読込 ----
@@ -171,6 +180,7 @@ async function loadDataFile(file) {
       const res = applyMaster(rep.rows, master);
       rep.rows = res.rows; rep.unmatched = res.unmatched;
       rep.cols = Object.keys(rep.rows[0] || {});
+      ruleStats = {hits: res.hits, unmatched: res.unmatched};
       if (res.col == null) toast(`対象列が見つかりません (候補: ${master.target_column_candidates.join(', ')})`);
     }
     reports.push(rep);
@@ -249,11 +259,11 @@ function readPreset() {
 }
 
 function writePreset(p) {
-  [1, 2, 3, 4].forEach(i => { $(`#row${i}`).value = p.rows[i - 1] ?? ''; });
+  [1, 2, 3, 4].forEach(i => { $(`#row${i}`).value = p.rows?.[i - 1] ?? ''; });
   $('#split').value = p.split ?? '';
   [1, 2].forEach(i => {
-    $(`#val${i}`).value = p.values[i - 1]?.col ?? '';
-    $(`#agg${i}`).value = p.values[i - 1]?.agg ?? 'sum';
+    $(`#val${i}`).value = p.values?.[i - 1]?.col ?? '';
+    $(`#agg${i}`).value = p.values?.[i - 1]?.agg ?? 'sum';
   });
 }
 
@@ -309,6 +319,42 @@ async function applyPreset(target /* 'all' | paneIndex */) {
     const cols = combine ? [SOURCE_COL, ...unionCols()] : (reports[assignments[i]]?.cols ?? []);
     await v.restore(presetConfig(cols));
   }
+}
+
+
+function refreshFavorites() {
+  const sel = $('#favoriteSelect');
+  if (!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">お気に入り選択</option>' + favorites.map((f, i) => `<option value="${i}">${f.name}</option>`).join('');
+  sel.value = keep;
+}
+
+function saveFavorite() {
+  const name = prompt('お気に入り集計の名前', `集計 ${favorites.length + 1}`);
+  if (!name) return;
+  favorites.push({name, preset: readPreset()});
+  refreshFavorites();
+  $('#favoriteSelect').value = String(favorites.length - 1);
+  toast(`お気に入り保存: ${name}`);
+}
+
+async function applyFavorite() {
+  const fav = favorites[Number($('#favoriteSelect').value)];
+  if (!fav) return;
+  presetTouched = true;
+  refreshPresetOptions();
+  writePreset(fav.preset);
+  await applyPreset($('#sync').checked ? 'all' : activePane);
+  toast(`お気に入り適用: ${fav.name}`);
+}
+
+function deleteFavorite() {
+  const i = Number($('#favoriteSelect').value);
+  if (!favorites[i]) return;
+  const [f] = favorites.splice(i, 1);
+  refreshFavorites();
+  toast(`お気に入り削除: ${f.name}`);
 }
 
 // ---- 描画 ----
@@ -397,21 +443,23 @@ async function exportViews() {
   if (!vs.length) { toast('保存するビューがありません'); return; }
   const views = await Promise.all(vs.map(v => v.save()));
   download('pivot-bench-views.json', {
-    kind: 'pivot-bench-views', version: 2, saved: new Date().toISOString(),
-    combine, assignments, preset: readPreset(), views
+    kind: VIEW_KIND, version: 3, saved: new Date().toISOString(),
+    combine, assignments, preset: readPreset(), favorites, views
   });
 }
 
 async function importViews(file) {
   try {
     const cfg = JSON.parse(await file.text());
-    if (cfg.kind !== 'pivot-bench-views' || !Array.isArray(cfg.views)) { toast('ビュー設定JSONではありません'); return; }
+    if (cfg.kind !== VIEW_KIND || !Array.isArray(cfg.views)) { toast('ビュー設定JSONではありません'); return; }
     if (!reports.length) { toast('先にデータを読み込んでください'); return; }
     if (cfg.version >= 2) {
       combine = !!cfg.combine;
       assignments = (cfg.assignments ?? [0, 0, 0]).map(a => Math.min(a, reports.length - 1));
+      favorites = Array.isArray(cfg.favorites) ? cfg.favorites : [];
       presetTouched = true;
       await rebuild();
+      refreshFavorites();
       if (cfg.preset) { refreshPresetOptions(); writePreset(cfg.preset); }
     }
     const vs = $$('perspective-viewer');
@@ -426,6 +474,75 @@ async function importViews(file) {
   }
 }
 
+
+function cloneMaster() { return JSON.parse(JSON.stringify(master ?? defaultMaster)); }
+function escAttr(v) {
+  return String(v ?? '').replace(/[&\"<>]/g, c => ({'&': '&amp;', '\"': '&quot;', '<': '&lt;', '>': '&gt;'}[c]));
+}
+function ruleToRow(r = {match: {type: 'exact', value: ''}, assign: ['', '', '']}) {
+  const mt = r.match ?? {type: 'exact', value: ''};
+  const val = escAttr(mt.type === 'range' ? mt.min : mt.value);
+  const max = escAttr(mt.type === 'range' ? mt.max : '');
+  const assign = [0, 1, 2].map(i => escAttr(r.assign?.[i]));
+  return `<tr><td class="idx"></td><td><select class="rtype">${['exact','prefix','regex','range'].map(t => `<option ${mt.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><input class="rval" value="${val}"></td><td><input class="rmax" value="${max}"></td><td><input class="a0" value="${assign[0]}"></td><td><input class="a1" value="${assign[1]}"></td><td><input class="a2" value="${assign[2]}"></td><td class="hit">0</td><td><button class="up">↑</button><button class="down">↓</button><button class="del">削除</button></td></tr>`;
+}
+function refreshRuleIndexes() {
+  $$('#masterRules tbody tr').forEach((tr, i) => { tr.querySelector('.idx').textContent = i + 1; tr.querySelector('.hit').textContent = (ruleStats.hits[i] ?? 0).toLocaleString(); });
+  $('#masterHitSummary').textContent = `未分類 ${ruleStats.unmatched.toLocaleString()}件`;
+}
+function openMasterEditor() {
+  const m = cloneMaster();
+  $('#masterName').value = m.meta?.name ?? '';
+  $('#masterUpdated').value = m.meta?.updated ?? new Date().toISOString().slice(0, 10);
+  $('#masterTargets').value = m.target_column_candidates.join(', ');
+  $('#masterUnmatched').value = m.unmatched.join(', ');
+  $('#masterRules tbody').innerHTML = m.rules.map(ruleToRow).join('');
+  refreshRuleIndexes();
+  $('#masterDialog').showModal();
+}
+function collectMasterFromEditor() {
+  return {meta: {name: $('#masterName').value, updated: $('#masterUpdated').value, note: master?.meta?.note ?? ''}, target_column_candidates: $('#masterTargets').value.split(',').map(s => s.trim()).filter(Boolean), levels: (master ?? defaultMaster).levels, rules: $$('#masterRules tbody tr').map(tr => { const type = tr.querySelector('.rtype').value; const match = type === 'range' ? {type, min: Number(tr.querySelector('.rval').value), max: Number(tr.querySelector('.rmax').value)} : {type, value: tr.querySelector('.rval').value}; return {match, assign: [0,1,2].map(i => tr.querySelector(`.a${i}`).value)}; }), unmatched: $('#masterUnmatched').value.split(',').map(s => s.trim()).slice(0, 3)};
+}
+async function applyMasterEditor() {
+  const m = collectMasterFromEditor();
+  const err = validateMaster(m);
+  if (err) { toast(`マスタが不正: ${err}`); return; }
+  master = m;
+  if (reports.length) { reapplyMasterAll(); if (!presetTouched) defaultPreset(); await rebuild(); }
+  refreshRuleIndexes();
+  toast('編集したマスタを適用しました');
+}
+async function activeViewerCsv() {
+  const v = $(`#pane${activePane} perspective-viewer`);
+  if (!v) throw new Error('集計結果がありません');
+  const view = await v.getView();
+  try { return await view.to_csv(); } finally { await view.delete?.().catch?.(() => {}); }
+}
+async function exportActiveCsv() {
+  const csv = await activeViewerCsv();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv'}));
+  a.download = `pivot-bench-pane${activePane + 1}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  toast('CSVを書き出しました');
+}
+async function copyActiveTsv() {
+  const tsv = (await activeViewerCsv()).replace(/,/g, '\t');
+  if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(tsv);
+  else {
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.append(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+  toast('集計結果をコピーしました');
+}
+
 // ---- UI配線 ----
 function pickFile(accept, cb) {
   const inp = document.createElement('input');
@@ -437,6 +554,17 @@ function pickFile(accept, cb) {
 }
 
 $('#open').onclick = () => pickFile('.csv,.xlsx', loadDataFile);
+$('#masterEdit').onclick = openMasterEditor;
+$('#closeMaster').onclick = () => $('#masterDialog').close();
+$('#addRule').onclick = () => { $('#masterRules tbody').insertAdjacentHTML('beforeend', ruleToRow()); refreshRuleIndexes(); };
+$('#applyMasterEdit').onclick = applyMasterEditor;
+$('#exportMasterEdit').onclick = () => download('pivot-bench-master.json', collectMasterFromEditor());
+$('#masterRules').onclick = e => { const tr = e.target.closest('tr'); if (!tr) return; if (e.target.className === 'del') tr.remove(); if (e.target.className === 'up' && tr.previousElementSibling) tr.parentNode.insertBefore(tr, tr.previousElementSibling); if (e.target.className === 'down' && tr.nextElementSibling) tr.parentNode.insertBefore(tr.nextElementSibling, tr); refreshRuleIndexes(); };
+$('#favoriteSave').onclick = saveFavorite;
+$('#favoriteSelect').onchange = applyFavorite;
+$('#favoriteDelete').onclick = deleteFavorite;
+$('#csvResult').onclick = () => exportActiveCsv().catch(e => toast(`CSV失敗: ${e.message}`));
+$('#copyResult').onclick = () => copyActiveTsv().catch(e => toast(`コピー失敗: ${e.message}`));
 $('#addReport').onclick = () => pickFile('.csv,.xlsx', loadDataFile);
 $('#masterOpen').onclick = () => pickFile('.json,application/json', loadMasterFile);
 $('#masterDefault').onclick = async () => {
@@ -461,7 +589,7 @@ $('#combineBtn').onclick = async () => {
 
 $('#applyBtn').onclick = () => { presetTouched = true; applyPreset($('#sync').checked ? 'all' : activePane); };
 $('#presetbar').addEventListener('change', e => {
-  if (e.target.matches('select')) { presetTouched = true; applyPreset($('#sync').checked ? 'all' : activePane); }
+  if (e.target.matches('select') && e.target.id !== 'favoriteSelect') { presetTouched = true; applyPreset($('#sync').checked ? 'all' : activePane); }
 });
 
 addEventListener('keydown', e => {

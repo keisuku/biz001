@@ -2,11 +2,14 @@
 <header>
   <h1>Pivot <span>Bench</span></h1>
   <nav>
+    <button id="masterEdit" title="マスタを表形式で編集">マスタ編集</button>
     <button id="masterOpen" title="バケットマスタJSONを読み込み">マスタを開く</button>
     <button id="masterDefault" title="組込みの標準マスタを適用">標準マスタ</button>
     <button id="masterExport" title="現在のバケットマスタをJSONで書き出し">マスタ書き出し</button>
     <button id="viewExport" title="全ペインのビュー設定をJSONで書き出し">ビュー書き出し</button>
     <button id="viewImport" title="ビュー設定JSONを読み込み">ビュー読込</button>
+    <button id="copyResult" title="アクティブペインの集計結果をタブ区切りでコピー">結果コピー</button>
+    <button id="csvResult" title="アクティブペインの集計結果をCSVで書き出し">CSV書き出し</button>
     <button id="specBtn">📖仕様書</button>
   </nav>
 </header>
@@ -17,6 +20,7 @@
   </section>
   <section id="bench" hidden>
     <div id="presetbar">
+      <span class="lbl">お気に入り</span><select id="favoriteSelect"><option value="">選択</option></select><button id="favoriteSave" title="現在の集計を名前付きでビュー設定JSONへ保存">保存</button><button id="favoriteDelete" title="選択中のお気に入りを削除">削除</button>
       <span class="lbl">行</span>
       <select id="row1"></select><select id="row2"></select><select id="row3"></select><select id="row4"></select>
       <span class="lbl">列分割</span>
@@ -41,6 +45,14 @@
   <button id="closeSpec">×</button>
   <h2>Pivot Bench 仕様要約</h2>
   <p>CSV/xlsx(最大3本)を正規化(全角→半角、△/()→負数、¥・カンマ除去、空・「-」→null、CSVはUTF-8/Shift_JIS自動判定)し、独立JSONのバケットマスタで大分類/中分類/小分類を派生。プリセットバーで行キー最大4個×列分割1個×値2個を選ぶだけでFINOS Perspective datagridの階層ピボットを最大3面に適用します。並置(面ごとにレポート割当)と結合(全レポートを「レポート」列付きで1テーブル化)を切替可能。localStorageと実行時ネットワークは使いません。マスタ・ビュー設定はJSONファイルの入出力で永続化します。<br>ショートカット: ⌘/Ctrl+O 開く / ⌘/Ctrl+Enter 適用 / 1・2・3 ペイン選択</p>
+</dialog>
+<dialog id="masterDialog" class="wide">
+  <button id="closeMaster">×</button>
+  <h2>バケットマスタ編集</h2>
+  <div class="master-meta"><label>名前 <input id="masterName"></label><label>更新日 <input id="masterUpdated" type="date"></label><label>対象列候補 <input id="masterTargets"></label><label>未分類 <input id="masterUnmatched"></label></div>
+  <div class="hit-summary"><b>直近ヒット</b> <span id="masterHitSummary">未適用</span></div>
+  <div class="table-wrap"><table id="masterRules"><thead><tr><th>#</th><th>種別</th><th>値/min</th><th>max</th><th>大分類</th><th>中分類</th><th>小分類</th><th>ヒット</th><th>操作</th></tr></thead><tbody></tbody></table></div>
+  <div class="dialog-actions"><button id="addRule">＋行追加</button><button id="applyMasterEdit">適用</button><button id="exportMasterEdit">JSONへ書き出し</button></div>
 </dialog>
 <script type="module">__APP__</script>
 </body></html>
