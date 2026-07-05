@@ -3,6 +3,8 @@
 日本の法人保険代理店向けに、SalesforceレポートCSV/xlsxをオフラインで正規化し、FINOS Perspectiveで高速ピボット表示する単一HTMLツールです。仕様の詳細は [docs/SPEC.md](docs/SPEC.md) を参照してください。
 
 > **全体の計画と「次にやること」は [atelier/はじめに.md](atelier/はじめに.md) にまとまっています。迷ったらそこから。**
+>
+> **完成品はビルド不要で [完成品/](完成品/) からダウンロードできます**(pivot-bench.html / ga4-bench.html。検収のたびに更新)。
 
 ## ビルド
 

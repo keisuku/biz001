@@ -1,6 +1,6 @@
 ---
 summary: GA4/Search ConsoleのCSVを入れると月報が出る単一HTMLツール「GA4 Bench」をCodexに作らせるお願い書。設計済み。ひと言言うだけ。
-status: 未実施
+status: 完了 (2026-07-05 Codex実装→Claude検収。月報が全く描画されない実バグ1件を修正)
 ---
 
 # 9. GA4月報ツール「GA4 Bench」を作る
