@@ -515,8 +515,9 @@ async function applyMasterEditor() {
 async function activeViewerCsv() {
   const v = $(`#pane${activePane} perspective-viewer`);
   if (!v) throw new Error('集計結果がありません');
+  // getView()が返すのはビューアが描画に使っている現用ビュー。deleteするとビューアが壊れる
   const view = await v.getView();
-  try { return await view.to_csv(); } finally { await view.delete?.().catch?.(() => {}); }
+  return view.to_csv();
 }
 async function exportActiveCsv() {
   const csv = await activeViewerCsv();
@@ -527,8 +528,26 @@ async function exportActiveCsv() {
   setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   toast('CSVを書き出しました');
 }
+// 引用符を解釈してCSV→TSV変換する(単純なカンマ置換だと "山田, 太郎" のような値が壊れる)
+function csvToTsv(csv) {
+  const lines = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < csv.length; i++) {
+    const c = csv[i];
+    if (inQ) {
+      if (c === '"') { if (csv[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+      else field += c === '\n' ? ' ' : c;
+    } else if (c === '"') inQ = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); lines.push(row.join('\t')); row = []; field = ''; }
+    else if (c !== '\r') field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); lines.push(row.join('\t')); }
+  return lines.join('\n');
+}
+
 async function copyActiveTsv() {
-  const tsv = (await activeViewerCsv()).replace(/,/g, '\t');
+  const tsv = csvToTsv(await activeViewerCsv());
   if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(tsv);
   else {
     const ta = document.createElement('textarea');
