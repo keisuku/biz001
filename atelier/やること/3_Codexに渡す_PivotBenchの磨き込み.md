@@ -1,6 +1,6 @@
 ---
 summary: Pivot Benchの次の磨き込み(マスタ編集画面・お気に入り集計・結果の書き出し)をCodexやClaude Codeにやらせるお願い書。
-status: 未実施
+status: 完了 (2026-07-05 Codex実装→Claude検収済み。不具合2件は検収で修正)
 ---
 
 # 3. Pivot Benchの磨き込み (次のバージョン)
